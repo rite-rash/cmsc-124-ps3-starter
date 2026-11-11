@@ -22,29 +22,37 @@
 ;;; E1 -- numbers and symbols.
 
 (defun lookup (name env)
-  "The value NAME is bound to in ENV.
 
-The first match wins, so an inner binding shadows an outer one that shares its
-name. Signal an error when NAME is not bound at all."
-  (declare (ignore name env))
-  (error "lookup is not implemented"))
+  
+  ;;; check if env is empty 
+  ( cond ((null env) (error "unbound variable ~a" name))
+      ;;;check if the key matches the name then return the value if so
+        ((eq name (car (car env))) (cdr (car env)))
+      ;;;recursive call to try next ones
+        (t (lookup name (cdr env)))))
 
 ;;; E2 -- prefix arithmetic.
 
-(defun eval-operands (exprs env)
-  "Every expression in EXPRS, evaluated in the same ENV, as a list.
 
-MAPCAR and a LAMBDA do this in one line. Watch the arity: EVAL-EXPR takes two
-arguments and MAPCAR hands its function one."
-  (declare (ignore exprs env))
-  (error "eval-operands is not implemented"))
+
+
+(defun eval-operands (exprs env)
+  ;;; for mapping each operand where lambda gets env
+  (mapcar (lambda (expr) (eval-expr expr env)) exprs))
 
 (defun apply-op (op values)
-  "Apply the arithmetic operator OP to the two numbers in VALUES.
 
-OP is the symbol +, -, or *. Signal an error for anything else."
-  (declare (ignore op values))
-  (error "apply-op is not implemented"))
+  ;;; get 2 eval nums 
+  (let ((x (car values))
+        (y (cadr values)))
+    (case op
+      (+ (+ x y))
+      (- (- x y))  
+      (* (* x y))    
+      (otherwise (error "unknown operator ~a" op)))))
+
+
+
 
 ;;; E3 -- let.
 
@@ -89,7 +97,21 @@ CLOSURE is not a closure, and when the argument count does not match."
 (defun eval-expr (expr env)
   "The value of EXPR in ENV.
 
-Order the branches with care. NIL is a symbol as well as the empty list, and a
-number is not a cons, so the atom tests come before the list tests."
-  (declare (ignore expr env))
-  (error "eval-expr is not implemented"))
+  Order the branches with care. NIL is a symbol as well as the empty list, and a
+  number is not a cons, so the atom tests come before the list tests."
+
+
+  (cond
+    ;; if num, eval themselves
+    ((numberp expr) expr)
+    
+    ;; for Symbols, make use of helper for lookup
+    ((symbolp expr) (lookup expr env))
+    
+    ;; for arithmetic
+    ;; expression should be not empty and first element should be an operator to run body
+    ((and (consp expr) (member (car expr) '(+ - *))) 
+    (apply-op (car expr) (eval-operands (cdr expr) env)))
+    
+    (t (error "invalid expression: ~s" expr))))
+

@@ -4,6 +4,13 @@
 This repository holds the CLISP prediction corpus and the toy evaluator for
 Problem Set 3. The assignment manual defines the work and the submission rules.
 
+## Members
+| Name | GitHub username |
+|---|---|
+| Trisha Mae A. Hechenagocia | rite-rash |
+| Renz Frederick P. Bañas | d3nzus |
+
+
 ## Layout
 
 ```text
