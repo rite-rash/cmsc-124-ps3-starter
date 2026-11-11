@@ -61,16 +61,21 @@
 
 MAPCAR takes two lists and #'CONS pairs them. Build a new list. Do not modify
 ENV, because the caller keeps using it after the extension goes out of scope."
-  (declare (ignore params args env))
-  (error "extend-env is not implemented"))
+  (append (mapcar #'cons params args) env))
 
 (defun eval-let (expr env)
   "Evaluate (let ((name init) ...) body).
 
 Every init is evaluated in ENV before any name is bound, so the bindings happen
 in parallel and an init cannot see a name the same LET introduces."
-  (declare (ignore expr env))
-  (error "eval-let is not implemented"))
+  (let* ((bindings (cadr expr))
+         (body (caddr expr))
+         ;; Evaluate every init in the original ENV first. Only after that do
+         ;; the names join the environment, which keeps the bindings parallel.
+         (values (mapcar (lambda (binding) (eval-expr (cadr binding) env))
+                         bindings))
+         (names (mapcar #'car bindings)))
+    (eval-expr body (extend-env names values env))))
 
 ;;; E4 -- lambda and application.
 
@@ -81,16 +86,21 @@ Return the list (:closure params body env). ENV is the environment the lambda
 was written in, not the one it will later be called from. Saving the wrong one
 is what makes the difference between 3 and 101 in the case the manual walks
 through."
-  (declare (ignore params body env))
-  (error "make-closure is not implemented"))
+  (list :closure params body env))
 
 (defun apply-closure (closure args)
   "Run CLOSURE on ARGS.
 
 The parameters join the environment the closure captured. Signal an error when
 CLOSURE is not a closure, and when the argument count does not match."
-  (declare (ignore closure args))
-  (error "apply-closure is not implemented"))
+  (unless (and (consp closure) (eq (car closure) :closure))
+    (error "not a closure: ~s" closure))
+  (destructuring-bind (marker params body env) closure
+    (declare (ignore marker))
+    (unless (= (length params) (length args))
+      (error "wrong number of arguments: expected ~d, got ~d"
+             (length params) (length args)))
+    (eval-expr body (extend-env params args env))))
 
 ;;; The dispatcher.
 
@@ -112,6 +122,20 @@ CLOSURE is not a closure, and when the argument count does not match."
     ;; expression should be not empty and first element should be an operator to run body
     ((and (consp expr) (member (car expr) '(+ - *))) 
     (apply-op (car expr) (eval-operands (cdr expr) env)))
-    
+
+    ;; let: bindings extend the environment for the body only
+    ((and (consp expr) (eq (car expr) 'let))
+     (eval-let expr env))
+
+    ;; lambda: capture the environment it was written in
+    ((and (consp expr) (eq (car expr) 'lambda))
+     (make-closure (cadr expr) (caddr expr) env))
+
+    ;; application: evaluate the operator expression, then the arguments,
+    ;; and run the resulting closure. This is a Lisp-1, so no FUNCALL.
+    ((consp expr)
+     (apply-closure (eval-expr (car expr) env)
+                    (eval-operands (cdr expr) env)))
+
     (t (error "invalid expression: ~s" expr))))
 
