@@ -45,7 +45,6 @@
   ;;; get 2 eval nums 
   (let ((x (car values))
         (y (cadr values)))
-    
     (case op
       (+ (+ x y))
       (- (- x y))  
@@ -120,7 +119,8 @@ CLOSURE is not a closure, and when the argument count does not match."
     ((symbolp expr) (lookup expr env))
     
     ;; for arithmetic
-    ((and (consp expr) (member (car expr) '(+ - *)))
+    ;; expression should be not empty and first element should be an operator to run body
+    ((and (consp expr) (member (car expr) '(+ - *))) 
     (apply-op (car expr) (eval-operands (cdr expr) env)))
 
     ;; let: bindings extend the environment for the body only
